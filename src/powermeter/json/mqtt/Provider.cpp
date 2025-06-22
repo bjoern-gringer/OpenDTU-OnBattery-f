@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <powermeter/json/mqtt/Provider.h>
 #include <MqttSettings.h>
-#include <MessageOutput.h>
 #include <ArduinoJson.h>
 #include <Utils.h>
+#include <LogHelper.h>
+
+static const char* TAG = "powerMeter";
+static const char* SUBTAG = "MQTT";
 
 namespace PowerMeters::Json::Mqtt {
 
@@ -16,7 +19,6 @@ bool Provider::init()
                 std::bind(&Provider::onMessage,
                     this, std::placeholders::_1, std::placeholders::_2,
                     std::placeholders::_3, std::placeholders::_4,
-                    std::placeholders::_5, std::placeholders::_6,
                     phaseIndex, &val)
                 );
         _mqttSubscriptions.push_back(topic);
@@ -36,8 +38,8 @@ Provider::~Provider()
 }
 
 void Provider::onMessage(Provider::MsgProperties const& properties,
-        char const* topic, uint8_t const* payload, size_t len, size_t index,
-        size_t total, uint8_t const phaseIndex, PowerMeterMqttValue const* cfg)
+        char const* topic, uint8_t const* payload, size_t len,
+        uint8_t const phaseIndex, PowerMeterMqttValue const* cfg)
 {
     auto extracted = Utils::getNumericValueFromMqttPayload<float>("PowerMeters::Json::Mqtt",
             std::string(reinterpret_cast<const char*>(payload), len), topic,
@@ -81,10 +83,8 @@ void Provider::onMessage(Provider::MsgProperties const& properties,
         }
     }
 
-    if (_verboseLogging) {
-        MessageOutput.printf("[PowerMeters::Json::Mqtt] Topic '%s': new value: %5.2f, "
-                "total: %5.2f\r\n", topic, newValue, getPowerTotal());
-    }
+    DTU_LOGD("Topic '%s': new value: %5.2f, total: %5.2f",
+            topic, newValue, getPowerTotal());
 }
 
 } // namespace PowerMeters::Json::Mqtt
